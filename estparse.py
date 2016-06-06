@@ -1,6 +1,13 @@
 import os
+import os.path
+import sys
+import smartsheet
 def estparse():
-	f =  open("1-Obj-1.txt", "r")
+	base = os.path.dirname(__file__)
+	filepath = os.path.abspath(os.path.join(base, "..", "1-Obj-1.txt"))
+	#base = os.getcwd()
+	#os.chdir("../../")
+	f =  open(filepath, "r")
 	assignInfo = []#all of the information from the file
 	dateRecieved = ''
 	insured = ''
@@ -37,22 +44,21 @@ def estparse():
 	contact = insured
 
 
-	print dateRecieved, insured, contact, claimNo, VIN, vehicleType, handlingAdjEmail
+	return dateRecieved, insured, contact, claimNo, VIN, vehicleType, handlingAdjEmail
+
+def smartsheetupload(dateRecieved, insured, contact, claimNo, VIN, vehicleType, handlingAdjEmail):
+	sheet = smartsheet.Smartsheet('1ep68bn2j4frngtyuumt0x3896')
+	me = sheet.Users.get_current_user()	
+	print me
+	#return None
 
 def main():
-	print "Welcome to Wawanesa Estimate Parser"
-	sheet = raw_input("Enter the name of the sheet that you wish to update: ")
-	print sheet
-	estimate = raw_input("Enter the name of the of the estimate: ")
-	moreEsts = "yes"
-	while True:
-		estparse()
-		moreEsts = raw_input("Do you wish to add another estimate to this sheet (yes/no)?: ")
-		if moreEsts != "yes":
-			break
-		else:
-			estimate = raw_input("Enter the name of the of the estimate: ")
-			moreEsts = "no"
+	#print "Welcome to Wawanesa Estimate Parser"
+	#sheet = raw_input("Enter the name of the sheet that you wish to update: ")
+	#print sheet
+	#estimate = raw_input("Enter the name of the of the estimate: ")
+	dateRecieved, insured, contact, claimno, vin, vt, handlingadjemail = estparse()
+	smartsheetupload(dateRecieved, insured, contact, claimno, vin, vt, handlingadjemail)
 
 
 if __name__ == "__main__":
