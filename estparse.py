@@ -21,6 +21,10 @@ def estparse():
 	VIN = ''
 	vehicleType = ''
 	handlingAdjEmail = ''
+	deductable = ''
+	city = ''
+	payGST = False 
+	flag = False # here so that I can get the insured city
 
 	for line in f:
 		assignInfo.append((line.lstrip().rstrip()))
@@ -42,15 +46,33 @@ def estparse():
 			x = value.split("VIN:  ")
 			VIN = x[1]
 			#print VIN
+		if "Deductible:  " in value:
+			x = value.split("Deductible:  ")
+			deductible = x[1]
+		if "City:  " in value:
+			x = value.split("City:  ")
+			city = x[1]
 		if "@" in value:
 			handlingAdjEmail =  value
-	contact = insured
-	return dateRecieved, insured, contact, claimNo, VIN, vehicleType, handlingAdjEmail
+		if "First Name:  " in value:
+			x = value.split("First Name:  ")
+			contact = x[1]
+		if "GST/HST Registered?: " in value:
+			x = value.split("GST/HST Registered?: " )
+			if x[1] == "Yes":
+				payGST = True 
+		if "Phone 1:  " in value:
+			x = value.split("Phone 1:  ")
+			phone = x[1]
+
+	return dateRecieved, insured, contact, claimNo, VIN, vehicleType, handlingAdjEmail, city, phone, deductible, payGST
 
 def smartsheetupload(sheetName):
 	sheetDict = {}
 	columnDict = {} 
-	sheet = smartsheet.Smartsheet('<access code>')
+	allRows = []
+	dateRecieved, insured, contact, claimno, vin, vt, handlingadjemail, city, phone, deductible, payGST= estparse()
+	sheet = smartsheet.Smartsheet('')
 	me = sheet.Users.get_current_user()	
 	#print me
 	action = sheet.Sheets.list_sheets(include_all=True)
@@ -65,20 +87,82 @@ def smartsheetupload(sheetName):
 		action = sheet.Sheets.get_columns(sheetID, include_all=True)
 		columns = action.data
 		for val in columns:
+			print val.type
 			columnDict[val.title] = val.id
 		
 		print columnDict
-		row_a = smartsheet.models.Row()
-		row_a.to_top = True
-
-		row_a.cells.append({
-		    'column_id': 663502235953028,
-		    'value': 'balla',
+		row = smartsheet.models.Row()
+		
+		row.to_bottom = True 
+		row.cells.append({
+		    'column_id': columnDict.get("Claim Number"),
+		    'value': claimno ,
 		    'strict': False
-		})
+		   })
+		
+		row.cells.append({
+		    'column_id': columnDict.get("Insured") ,
+		    'value': insured ,
+		    'strict': False
+		   })
+		row.cells.append({
+		    'column_id': columnDict.get("Contact") ,
+		    'value': contact ,
+		    'strict': False
+		    })
+
+		row.cells.append({
+		    'column_id': columnDict.get("Assignment Received") ,
+		    'value': dateRecieved,
+		    'strict': False
+		    })
+
+		row.cells.append({
+		    'column_id': columnDict.get("Contact Number") ,
+		    'value': phone,
+		    'strict': False
+		    }) 
+
+		row.cells.append({
+		    'column_id': columnDict.get("City") ,
+		    'value': city,
+		    'strict': False
+		    }) 
+
+		row.cells.append({
+		    'column_id': columnDict.get("VIN") ,
+		    'value': vin,
+		    'strict': False
+		    }) 
+
+		row.cells.append({
+		    'column_id': columnDict.get("Year Make Model") ,
+		    'value': vt,
+		    'strict': False
+		    }) 
+
+		row.cells.append({
+		    'column_id': columnDict.get("Deductible") ,
+		    'value': deductible,
+		    'strict': False
+		    }) 
+		
+		row.cells.append({
+		    'column_id': 7339369083234180,
+		    'value': True
+		   })
+		row.cells.append({
+		    'column_id': columnDict.get("Handling Adjuster Email") ,
+		    'value': handlingadjemail,
+		    'strict': False
+		    }) 
+		
+
+
 
 		# Add rows to sheet.
-		action = sheet.Sheets.add_rows(sheetID, [row_a])
+		action = sheet.Sheets.add_rows(sheetID, [row])
+
 	else:
 		makeSheetQuery = raw_input("Create new sheet (y/n): ")
 		if makeSheetQuery == "y":
@@ -95,7 +179,6 @@ def main():
 	sheet = raw_input("Enter the name of the sheet that you wish to update: ")
 	#print sheet
 	#estimate = raw_input("Enter the name of the of the estimate: ")
-	dateRecieved, insured, contact, claimno, vin, vt, handlingadjemail = estparse()
 	smartsheetupload(sheet)
 
 
