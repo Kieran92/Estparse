@@ -4,10 +4,11 @@ import os.path
 import sys
 import smartsheet
 import requests
+import re
 
-def estparse():
+def estparse(folder, fileName):
 	base = os.path.dirname(__file__)
-	filepath = os.path.abspath(os.path.join(base, "..", "1-Obj-1.txt"))
+	filepath = os.path.abspath(os.path.join(base, "..","..", folder, fileName))
 	#base = os.getcwd()
 	#os.chdir("../../")
 	f =  open(filepath, "r")
@@ -53,7 +54,10 @@ def estparse():
 			x = value.split("City:  ")
 			city = x[1]
 		if "@" in value:
-			handlingAdjEmail =  value
+			y = value.split(' ')
+			for word in y:
+				if  "@" in word:
+					handlingAdjEmail = word
 		if "First Name:  " in value:
 			x = value.split("First Name:  ")
 			contact = x[1]
@@ -64,14 +68,20 @@ def estparse():
 		if "Phone 1:  " in value:
 			x = value.split("Phone 1:  ")
 			phone = x[1]
+		if "Vehicle:                               Description:  " in value:
+			x = value.split("Description:  ")
+			vehicleType = x[1]
+
 
 	return dateRecieved, insured, contact, claimNo, VIN, vehicleType, handlingAdjEmail, city, phone, deductible, payGST
 
-def smartsheetupload(sheetName):
+def smartsheetupload(sheetName, folder):
 	sheetDict = {}
 	columnDict = {} 
 	allRows = []
-	dateRecieved, insured, contact, claimno, vin, vt, handlingadjemail, city, phone, deductible, payGST= estparse()
+	base = os.path.dirname(__file__)
+	filepath = os.path.abspath(os.path.join(base, "..","..", folder))
+
 	sheet = smartsheet.Smartsheet('')
 	me = sheet.Users.get_current_user()	
 	#print me
@@ -91,77 +101,79 @@ def smartsheetupload(sheetName):
 			columnDict[val.title] = val.id
 		
 		print columnDict
-		row = smartsheet.models.Row()
-		
-		row.to_bottom = True 
-		row.cells.append({
-		    'column_id': columnDict.get("Claim Number"),
-		    'value': claimno ,
-		    'strict': False
-		   })
-		
-		row.cells.append({
-		    'column_id': columnDict.get("Insured") ,
-		    'value': insured ,
-		    'strict': False
-		   })
-		row.cells.append({
-		    'column_id': columnDict.get("Contact") ,
-		    'value': contact ,
-		    'strict': False
-		    })
+		for filename in os.listdir(filepath):
+			dateRecieved, insured, contact, claimno, vin, vt, handlingadjemail, city, phone, deductible, payGST= estparse(folder, filename)
+			row = smartsheet.models.Row()
+			row.to_bottom = True 
+			row.cells.append({
+			    'column_id': columnDict.get("Claim Number"),
+			    'value': claimno ,
+			    'strict': False
+			   })
+			
+			row.cells.append({
+			    'column_id': columnDict.get("Insured") ,
+			    'value': insured ,
+			    'strict': False
+			   })
+			row.cells.append({
+			    'column_id': columnDict.get("Contact") ,
+			    'value': contact ,
+			    'strict': False
+			    })
 
-		row.cells.append({
-		    'column_id': columnDict.get("Assignment Received") ,
-		    'value': dateRecieved,
-		    'strict': False
-		    })
+			row.cells.append({
+			    'column_id': columnDict.get("Assignment Received") ,
+			    'value': dateRecieved,
+			    'strict': False
+			    })
 
-		row.cells.append({
-		    'column_id': columnDict.get("Contact Number") ,
-		    'value': phone,
-		    'strict': False
-		    }) 
+			row.cells.append({
+			    'column_id': columnDict.get("Contact Number") ,
+			    'value': phone,
+			    'strict': False
+			    }) 
 
-		row.cells.append({
-		    'column_id': columnDict.get("City") ,
-		    'value': city,
-		    'strict': False
-		    }) 
+			row.cells.append({
+			    'column_id': columnDict.get("City") ,
+			    'value': city,
+			    'strict': False
+			    }) 
 
-		row.cells.append({
-		    'column_id': columnDict.get("VIN") ,
-		    'value': vin,
-		    'strict': False
-		    }) 
+			row.cells.append({
+			    'column_id': columnDict.get("VIN") ,
+			    'value': vin,
+			    'strict': False
+			    }) 
 
-		row.cells.append({
-		    'column_id': columnDict.get("Year Make Model") ,
-		    'value': vt,
-		    'strict': False
-		    }) 
+			row.cells.append({
+			    'column_id': columnDict.get("Year Make Model") ,
+			    'value': vt,
+			    'strict': False
+			    }) 
 
-		row.cells.append({
-		    'column_id': columnDict.get("Deductible") ,
-		    'value': deductible,
-		    'strict': False
-		    }) 
-		
-		row.cells.append({
-		    'column_id': 7339369083234180,
-		    'value': True
-		   })
-		row.cells.append({
-		    'column_id': columnDict.get("Handling Adjuster Email") ,
-		    'value': handlingadjemail,
-		    'strict': False
-		    }) 
+			row.cells.append({
+			    'column_id': columnDict.get("Deductible") ,
+			    'value': deductible,
+			    'strict': False
+			    }) 
+			
+			row.cells.append({
+			    'column_id': 7339369083234180,
+			    'value': True
+			   })
+			row.cells.append({
+			    'column_id': columnDict.get("Handling Adjuster Email") ,
+			    'value': handlingadjemail,
+			    'strict': False
+			    }) 
+			allRows.append(row)
 		
 
 
 
 		# Add rows to sheet.
-		action = sheet.Sheets.add_rows(sheetID, [row])
+		action = sheet.Sheets.add_rows(sheetID, allRows)
 
 	else:
 		makeSheetQuery = raw_input("Create new sheet (y/n): ")
@@ -178,8 +190,8 @@ def main():
 	#print "Welcome to Wawanesa Estimate Parser"
 	sheet = raw_input("Enter the name of the sheet that you wish to update: ")
 	#print sheet
-	#estimate = raw_input("Enter the name of the of the estimate: ")
-	smartsheetupload(sheet)
+	folder = raw_input("Enter the name of the folder containing the dispatches: ")
+	smartsheetupload(sheet, folder)
 
 
 if __name__ == "__main__":
